@@ -17,6 +17,7 @@ import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
 import com.example.lab_week_08.worker.FirstWorker
 import com.example.lab_week_08.worker.SecondWorker
+import com.example.lab_week_08.worker.ThirdWorker
 
 class MainActivity : AppCompatActivity() {
     //Create an instance of a work manager
@@ -65,8 +66,18 @@ class MainActivity : AppCompatActivity() {
                 .INPUT_DATA_ID, id)
             ).build()
 
+        //This request is created for the ThirdWorker class
+        val ThirdRequest = OneTimeWorkRequest
+            .Builder(ThirdWorker::class.java)
+            .setConstraints(networkConstraints)
+            .setInputData(getIdInputData(ThirdWorker
+                .INPUT_DATA_ID, id)
+            ).build()
+
+
         workManager.beginWith(firstRequest)
             .then(secondRequest)
+            .then(ThirdRequest)
             .enqueue()
 
 
@@ -93,6 +104,12 @@ class MainActivity : AppCompatActivity() {
                     launchNotificationService()
                 }
             }
+        workManager.getWorkInfoByIdLiveData(ThirdRequest.id).observe(this) { info ->
+            if (info?.state?.isFinished == true) {
+                showResult("ThirdWorker selesai")
+                launchSecondNotificationService()
+            }
+        }
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -133,6 +150,18 @@ class MainActivity : AppCompatActivity() {
         }
 
         //Start the foreground service through the Service Intent
+        ContextCompat.startForegroundService(this, serviceIntent)
+    }
+
+    private fun launchSecondNotificationService() {
+        SecondNotificationService.trackingCompletion.observe(this) { Id ->
+            showResult("SecondNotificationService selesai untuk ID $Id")
+        }
+
+        val serviceIntent = Intent(this, SecondNotificationService::class.java).apply {
+            putExtra(SecondNotificationService.EXTRA_ID, "001")
+        }
+
         ContextCompat.startForegroundService(this, serviceIntent)
     }
 
